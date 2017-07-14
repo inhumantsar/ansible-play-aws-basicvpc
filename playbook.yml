@@ -1,0 +1,61 @@
+---
+- name: Build out a VPC in AWS
+  hosts: all
+  connection: local
+  gather_facts: False
+
+  tasks:
+    - name: "Ensure pip is installed."
+      easy_install: name=pip
+    - name: "Ensure boto is installed."
+      pip: name=boto
+
+    - name: "Create the vpc if it doesn't already exist."
+      local_action:
+        module: ec2_vpc_net
+        name: "{{ vpc_name }}_{{ service_env }}"
+        cidr_block: "{{ vpc_cidr }}"
+        region: "{{ vpc_region }}"
+        state: "{{ service_state }}"
+      register: vpc
+
+    # todo: asserts against facts module
+
+    - name: "Create public subnets"
+      local_action:
+        module: ec2_vpc_subnet
+        state: "{{ service_state }}"
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ vpc_region }}"
+        cidr: "{{ item }}"
+        az: "{{ vpc_region }}{{ vpc_public_subnet_azs[item] }}"
+        tags:
+          vpc: "{{ vpc_name }}_{{ service_env }}"
+      with_items:
+        - "{{ vpc_public_subnet_cidrs }}"
+      register: public_subnets
+
+    # todo: asserts against facts module
+
+    - name: "Create internet gateway for public subnets"
+      local_action:
+        module: ec2_vpc_igw
+        state: "{{ service_state }}"
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ vpc_region }}"
+      register: igw
+
+    - name: "Create route table for public subnets"
+      local_action:
+        module: ec2_vpc_route_table
+        state: "{{ service_state }}"
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ vpc_region }}"
+        subnets: "{{ vpc_public_subnet_cidrs }}"
+        tags:
+          vpc: "{{ vpc_name }}_{{ service_env }}"
+        routes:
+          - dest: 0.0.0.0/0
+            gateway_id: "{{ igw.gateway_id }}"
+
+    # todo: asserts against facts module

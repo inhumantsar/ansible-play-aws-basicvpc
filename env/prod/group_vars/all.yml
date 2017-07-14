@@ -1,0 +1,12 @@
+---
+service_env: 'prod'
+service_state: 'present'
+vpc_name: '{{ cookiecutter.vpc_name }}'
+vpc_cidr: '10.10.0.0/16'
+vpc_region: '{{ cookiecutter.vpc_region }}'
+vpc_public_subnet_cidrs:
+  - '10.10.1.0/24'
+  - '10.10.2.0/24'
+vpc_public_subnet_azs:
+  '10.10.1.0/24': 'a'
+  '10.10.2.0/24': 'b'
