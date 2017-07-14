@@ -19,7 +19,11 @@
         state: "{{ service_state }}"
       register: vpc
 
-    # todo: asserts against facts module
+    - name: "Confirm vpc created with correct cidr"
+      assert:
+        that:
+          - "vpc.vpc.cidr_block == vpc_cidr"
+        msg: "Unexpected cidr block assigned to VPC."
 
     - name: "Create public subnets"
       local_action:
@@ -35,7 +39,11 @@
         - "{{ vpc_public_subnet_cidrs }}"
       register: public_subnets
 
-    # todo: asserts against facts module
+    # it's hard to get fancy with dicts in ansible the way one might in python
+    - name: "Confirm the right number of subnets were created"
+      assert:
+        that:
+          - "public_subnets.results|length == vpc_public_subnet_cidrs|length"
 
     - name: "Create internet gateway for public subnets"
       local_action:
@@ -44,6 +52,12 @@
         vpc_id: "{{ vpc.vpc.id }}"
         region: "{{ vpc_region }}"
       register: igw
+
+    - name: "Confirm we got a valid gateway id"
+      assert:
+        that:
+          - "igw.gateway_id != ''"
+        msg: "Empty or non-existant internet gateway id. did the create fail silently?"
 
     - name: "Create route table for public subnets"
       local_action:
@@ -57,5 +71,11 @@
         routes:
           - dest: 0.0.0.0/0
             gateway_id: "{{ igw.gateway_id }}"
+      register: rtb
 
-    # todo: asserts against facts module
+    - name: "Confirm route table settings"
+      assert:
+        that:
+          - "rtb.route_table.routes[1].destination_cidr_block == '0.0.0.0/0'"
+          - "rtb.route_table.routes[1].gateway_id == igw.gateway_id"
+          - "rtb.route_table.vpc_id == vpc.vpc.id"
