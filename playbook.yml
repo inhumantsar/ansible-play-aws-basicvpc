@@ -16,7 +16,6 @@
         name: "{{ vpc_name }}_{{ service_env }}"
         cidr_block: "{{ vpc_cidr }}"
         region: "{{ vpc_region }}"
-        state: "{{ service_state }}"
       register: vpc
 
     - name: "Confirm vpc created with correct cidr"
@@ -28,7 +27,6 @@
     - name: "Create public subnets"
       local_action:
         module: ec2_vpc_subnet
-        state: "{{ service_state }}"
         vpc_id: "{{ vpc.vpc.id }}"
         region: "{{ vpc_region }}"
         cidr: "{{ item }}"
@@ -48,7 +46,6 @@
     - name: "Create internet gateway for public subnets"
       local_action:
         module: ec2_vpc_igw
-        state: "{{ service_state }}"
         vpc_id: "{{ vpc.vpc.id }}"
         region: "{{ vpc_region }}"
       register: igw
@@ -62,7 +59,6 @@
     - name: "Create route table for public subnets"
       local_action:
         module: ec2_vpc_route_table
-        state: "{{ service_state }}"
         vpc_id: "{{ vpc.vpc.id }}"
         region: "{{ vpc_region }}"
         subnets: "{{ vpc_public_subnet_cidrs }}"
